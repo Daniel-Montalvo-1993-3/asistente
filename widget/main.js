@@ -51,7 +51,10 @@ function createWidget() {
       nodeIntegration: false
     }
   });
-  widgetWin.setAlwaysOnTop(true, 'screen-saver');
+  // En macOS el nivel 'screen-saver' bloquea el minimize real (la ventana
+  // reaparece sola); 'floating' se comporta igual de always-on-top pero sí
+  // minimiza. Windows se queda con 'screen-saver' como antes.
+  widgetWin.setAlwaysOnTop(true, process.platform === 'darwin' ? 'floating' : 'screen-saver');
   widgetWin.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
   widgetWin.loadFile(path.join(__dirname, 'renderer', 'index.html'));
   // X del widget = cerrar todo (el dashboard puede estar oculto; sin esto
@@ -84,11 +87,15 @@ function createDashboard() {
 
   // Minimizar el dashboard → ocultarlo y mostrar el widget.
   // Deshacemos la minimización primero para que, cuando el usuario vuelva al
-  // dashboard, aparezca en tamaño normal.
+  // dashboard, aparezca en tamaño normal. En macOS ese restore() reabre la
+  // ventana a medio animar y el hide() posterior no la oculta del todo; ahí
+  // nos lo saltamos (showDashboard ya restaura antes de mostrar).
   dashboardWin.on('minimize', () => {
     if (!dashboardWin) return;
     showWidget();
-    try { dashboardWin.restore(); } catch {}
+    if (process.platform !== 'darwin') {
+      try { dashboardWin.restore(); } catch {}
+    }
     try { dashboardWin.hide(); } catch {}
   });
 
