@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Jarvis</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="widget">
+    <!-- Fondo animado (shader WebGL) -->
+    <canvas id="bgCanvas" class="bg-canvas"></canvas>
+
+    <!-- Capa de contenido encima del shader -->
+    <div class="widget-content">
+      <!-- Barra superior (arrastrable) -->
+      <header class="titlebar">
+        <div class="brand">
+          <span class="dot" id="statusDot"></span>
+          <span class="name">JARVIS</span>
+          <span class="status" id="statusText">conectando…</span>
+        </div>
+        <div class="controls">
+          <button id="soundBtn" title="Silenciar sonidos">🔊</button>
+          <button id="dashBtn" title="Abrir dashboard">📊</button>
+          <button id="minBtn" title="Minimizar">—</button>
+          <button id="closeBtn" title="Cerrar">✕</button>
+        </div>
+      </header>
+
+      <!-- Conversación -->
+      <main class="messages" id="messages"></main>
+
+      <!-- Entrada -->
+      <footer class="inputbar">
+        <button id="micBtn" title="Prender / apagar micrófono">🎤</button>
+        <input id="input" type="text" placeholder="Escríbele a Jarvis…" autocomplete="off" />
+        <button id="sendBtn" title="Enviar">➤</button>
+      </footer>
+    </div>
+  </div>
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three":          "https://unpkg.com/three@0.160.0/build/three.module.min.js",
+      "three/addons/":  "https://unpkg.com/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+  <script type="module" src="shader-bg.js"></script>
+  <script src="sounds.js"></script>
+  <script src="renderer.js"></script>
+</body>
+</html>

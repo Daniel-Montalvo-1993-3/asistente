@@ -1,0 +1,84 @@
+# ============================================================================
+#  JARVIS — .gitignore
+#  Objetivo: nunca subir cosas personales ni pesadas al repo.
+#  Si clonas en otra máquina, el script `setup.ps1` / `setup.sh` recrea lo que
+#  falta a partir de las plantillas (`.sample`).
+# ============================================================================
+
+# ---- Entornos y dependencias (cada máquina crea el suyo) ----
+.venv/
+venv/
+env/
+widget/node_modules/
+__pycache__/
+*.pyc
+*.pyo
+
+# ---- Configuración personal ----
+# Comparte SOLO config.sample.json (plantilla). Tu config.json real queda fuera.
+config/config.json
+config/config.local.json
+config/*.local.json
+
+# ---- Memoria / conversaciones (datos personales de Jarvis) ----
+logs/
+*.jsonl
+
+# ---- Vault de Obsidian (TUS notas) ----
+# Pon aquí la ruta real de tu vault si está dentro del proyecto.
+vault-prueba/
+vault/
+*.vault/
+# Notas sueltas .md que no sean documentación del proyecto:
+# (añade excepciones con '!' si quieres incluir docs .md específicos del repo)
+
+# ---- Sonidos personalizados del widget (quedan los originales en _originals/) ----
+widget/renderer/audio/_backup/
+# Si subiste sonidos tuyos y no quieres compartirlos, descomenta:
+# widget/renderer/audio/*.mp3
+# widget/renderer/audio/*.wav
+# !widget/renderer/audio/_originals/
+
+# ---- Modelos descargados (muy pesados) ----
+voices/
+models/
+*.onnx
+*.gguf
+*.safetensors
+
+# ---- Autenticación / tokens / secretos (nunca commitear) ----
+.env
+.env.*
+*.env
+secrets/
+credentials/
+*.pem
+*.key
+*.crt
+*token*
+*secret*
+
+# ---- Capturas de pantalla que Jarvis pudo generar ----
+screenshots/
+captures/
+
+# ---- Editores / IDE con configs locales ----
+.vscode/
+.idea/
+*.sublime-*
+.history/
+
+# ---- Sistema operativo ----
+.DS_Store
+Thumbs.db
+desktop.ini
+*.log
+
+# ---- Build / distribución ----
+dist/
+build/
+out/
+*.exe
+*.app
+*.dmg
+*.zip

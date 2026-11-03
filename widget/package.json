@@ -1,0 +1,14 @@
+{
+  "name": "jarvis-widget",
+  "version": "0.1.0",
+  "description": "Widget flotante de Jarvis",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "author": "Daniel Montalvo",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^33.0.0"
+  }
+}

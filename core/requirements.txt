@@ -1,0 +1,18 @@
+# Núcleo de Jarvis
+websockets>=12.0
+
+# Voz (Fase 1)
+piper-tts
+
+# Oído (Fase 2)
+sounddevice        # captura de micrófono
+openwakeword       # palabra de activación "Hey Jarvis"
+faster-whisper     # voz a texto (STT)
+numpy
+
+# Dashboard (Fase 6)
+psutil             # diagnóstico de hardware + monitor de recursos
+
+# Cerebro local opcional (Fase 7 — selector de proveedor)
+# Ollama se instala aparte (https://ollama.com). Jarvis habla con él vía HTTP.
+# Modelo recomendado: `ollama pull qwen2.5-coder:7b` (RTX 2070 SUPER 8GB).

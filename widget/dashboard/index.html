@@ -1,0 +1,716 @@
+<!doctype html>
+<html lang="es" data-theme="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Jarvis — Dashboard</title>
+  <link rel="stylesheet" href="dashboard.css" />
+</head>
+<body>
+  <!-- Fondo animado (shader WebGL compartido con el widget) -->
+  <canvas id="bgCanvas" class="bg-canvas"></canvas>
+
+  <!-- Chat flotante tipo widget, siempre visible encima del shader -->
+  <aside id="floatingChat" class="floating-chat">
+    <header class="fc-head">
+      <div class="fc-brand">
+        <span class="fc-dot" id="fcDot"></span>
+        <span class="fc-name">JARVIS</span>
+        <span class="fc-status" id="fcStatus">—</span>
+      </div>
+      <div class="fc-controls">
+        <button id="fcMinBtn" title="Minimizar chat">—</button>
+      </div>
+    </header>
+    <main class="fc-messages" id="fcMessages"></main>
+    <footer class="fc-input">
+      <button id="fcMicBtn" title="Prender / apagar micrófono">🎤</button>
+      <input id="fcText" type="text" placeholder="Escríbele a Jarvis…" autocomplete="off" />
+      <button id="fcSendBtn" title="Enviar">➤</button>
+    </footer>
+  </aside>
+  <button id="fcOpenBtn" class="fc-open-btn" title="Abrir chat">💬</button>
+
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo">🤖</span>
+      <div>
+        <div class="title">Jarvis — Dashboard</div>
+        <div class="subtitle" id="connStatus">conectando…</div>
+      </div>
+      <div class="brand-right">
+        <button class="icon-btn" id="themeToggle" title="Cambiar tema">🌙</button>
+      </div>
+    </div>
+    <nav class="tabs">
+      <button class="tab active" data-tab="estado">Estado</button>
+      <button class="tab" data-tab="grafo">🧠 Grafo del vault</button>
+      <button class="tab" data-tab="arquitectura">🛰️ Arquitectura 3D</button>
+      <button class="tab" data-tab="historial">Historial</button>
+      <button class="tab" data-tab="comandos">Comandos y archivos</button>
+      <button class="tab" data-tab="transparencia">Transparencia</button>
+      <button class="tab" data-tab="sistema">Sistema</button>
+      <button class="tab" data-tab="config">Configuración</button>
+      <button class="tab" data-tab="sonidos">🔊 Sonidos</button>
+      <button class="tab" data-tab="mcps">MCPs</button>
+      <button class="tab" data-tab="ayuda">Ayuda</button>
+    </nav>
+  </header>
+
+  <!-- Pestaña Estado -->
+  <section class="tab-panel active" id="tab-estado">
+    <div class="grid-2">
+      <div class="card">
+        <h3>Estado actual</h3>
+        <div class="status-big" id="stateBig">—</div>
+        <div class="muted" id="uptimeLabel">Núcleo activo hace —</div>
+      </div>
+      <div class="card">
+        <h3>Última respuesta</h3>
+        <div class="latency-row">
+          <div><span class="muted">Cerebro</span><strong id="latBrain">—</strong></div>
+          <div><span class="muted">Voz</span><strong id="latVoice">—</strong></div>
+          <div><span class="muted">Turnos</span><strong id="turnsCount">0</strong></div>
+        </div>
+        <div class="muted small" id="lastReply">—</div>
+      </div>
+      <div class="card">
+        <h3>Modelos activos</h3>
+        <table class="kv">
+          <tr><td>Cerebro</td><td><span id="mBrain">—</span></td></tr>
+          <tr><td>Permisos</td><td><span class="chip" id="mLevel">—</span></td></tr>
+          <tr><td>Oído (STT)</td><td><code id="mEars">—</code></td></tr>
+          <tr><td>Voz (TTS)</td><td><code id="mVoice">—</code></td></tr>
+          <tr><td>Vault</td><td><code id="mVault">—</code></td></tr>
+        </table>
+      </div>
+      <div class="card">
+        <h3>Consumo estimado (Pro)</h3>
+        <div class="latency-row">
+          <div><span class="muted">Tokens último turno</span><strong id="tokLast">—</strong></div>
+          <div><span class="muted">Tokens sesión</span><strong id="tokSession">—</strong></div>
+          <div><span class="muted">Costo estimado</span><strong id="costEst">—</strong></div>
+        </div>
+        <div class="muted small">
+          Solo las llamadas al cerebro consumen tu plan Pro. Oído, voz y dashboard son locales.
+          Cálculo aproximado usando precios públicos de Sonnet (3 USD / 15 USD por M tokens).
+        </div>
+      </div>
+      <div class="card">
+        <h3>Recursos de Jarvis</h3>
+        <div class="latency-row">
+          <div><span class="muted">CPU (Jarvis)</span><strong id="resCpu">—</strong></div>
+          <div><span class="muted">RAM (Jarvis)</span><strong id="resRam">—</strong></div>
+          <div><span class="muted">CPU sistema</span><strong id="resSysCpu">—</strong></div>
+          <div><span class="muted">RAM sistema</span><strong id="resSysRam">—</strong></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Pestaña Grafo del vault -->
+  <section class="tab-panel" id="tab-grafo">
+    <div class="card graph-card">
+      <div class="row-between">
+        <h3>🧠 Red neuronal del vault (3D)</h3>
+        <div class="graph-controls">
+          <button class="btn ghost small" id="graphReload">Recargar</button>
+          <label class="muted small">
+            <input type="checkbox" id="showLabels" checked /> Etiquetas
+          </label>
+          <label class="muted small">
+            <input type="checkbox" id="autoRotate" checked /> Auto-rotar
+          </label>
+          <label class="muted small">
+            <input type="range" id="chargeSlider" min="-400" max="-20" value="-120" /> Separación
+          </label>
+        </div>
+      </div>
+      <div class="legend" id="graphLegend"></div>
+      <div id="graph3d" class="graph-3d"></div>
+      <div class="muted small graph-info" id="graphInfo">—</div>
+    </div>
+  </section>
+
+  <!-- Pestaña Arquitectura 3D -->
+  <section class="tab-panel" id="tab-arquitectura">
+    <div class="card arch-card">
+      <div class="row-between">
+        <h3>🛰️ Cómo se conecta Jarvis</h3>
+        <div class="arch-controls">
+          <label class="muted small"><input type="checkbox" id="archAutoRotate" checked /> Auto-rotar</label>
+          <label class="muted small"><input type="checkbox" id="archShowLabels" checked /> Etiquetas</label>
+          <label class="muted small"><input type="checkbox" id="archBloom" checked /> Bloom (holograma)</label>
+          <button class="btn ghost small" id="archReset">Centrar cámara</button>
+        </div>
+      </div>
+      <div class="arch-legend" id="archLegend"></div>
+      <div id="arch3d" class="arch-3d"></div>
+      <div class="muted small" id="archTip">Arrastra para rotar · rueda para zoom · pasa el ratón por los nodos para ver detalles.</div>
+    </div>
+  </section>
+
+  <!-- Pestaña Historial -->
+  <section class="tab-panel" id="tab-historial">
+    <div class="card">
+      <div class="row-between">
+        <h3>Historial de conversación</h3>
+        <div>
+          <button class="btn ghost" id="refreshHist">Actualizar</button>
+          <button class="btn ghost" id="exportJson">Exportar JSON</button>
+          <button class="btn ghost" id="exportCsv">Exportar CSV</button>
+          <button class="btn danger" id="clearHist">Borrar</button>
+        </div>
+      </div>
+      <div id="historyBox" class="history">Cargando…</div>
+    </div>
+  </section>
+
+  <!-- Pestaña Comandos y archivos -->
+  <section class="tab-panel" id="tab-comandos">
+    <div class="grid-2">
+      <div class="card">
+        <div class="row-between">
+          <h3>⚡ Comandos ejecutados (Fase 4)</h3>
+          <button class="btn ghost small" id="refreshCmds">Refrescar</button>
+        </div>
+        <div id="commandsBox" class="log-list"><div class="muted">Aún no se han registrado comandos.</div></div>
+      </div>
+      <div class="card">
+        <div class="row-between">
+          <h3>📝 Archivos del vault tocados</h3>
+          <button class="btn ghost small" id="refreshFiles">Refrescar</button>
+        </div>
+        <div id="filesBox" class="log-list"><div class="muted">Aún no hay actividad en el vault.</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Pestaña Transparencia -->
+  <section class="tab-panel" id="tab-transparencia">
+    <div class="card">
+      <div class="row-between">
+        <h3>🔍 Modo transparencia</h3>
+        <button class="btn ghost small" id="refreshTrans">Refrescar</button>
+      </div>
+      <p class="muted small">
+        Ve exactamente qué prompt se le envió al cerebro en el último turno y su respuesta cruda,
+        antes de cualquier procesamiento. Útil para depurar comportamiento.
+      </p>
+      <h4>Prompt del sistema</h4>
+      <pre class="code-block" id="transSystem">—</pre>
+      <h4>Prompt del usuario</h4>
+      <pre class="code-block" id="transUser">—</pre>
+      <h4>Respuesta cruda</h4>
+      <pre class="code-block" id="transRaw">—</pre>
+      <h4>Tokens</h4>
+      <pre class="code-block small" id="transTokens">—</pre>
+    </div>
+  </section>
+
+  <!-- Pestaña Sistema -->
+  <section class="tab-panel" id="tab-sistema">
+    <div class="card">
+      <h3>Tu equipo</h3>
+      <div id="hwBox" class="hw-grid"><div class="muted">Cargando…</div></div>
+    </div>
+    <div class="card">
+      <h3>Configuración recomendada</h3>
+      <div id="recoBox" class="muted">Cargando recomendaciones…</div>
+    </div>
+    <div class="card">
+      <h3>Avisos</h3>
+      <div id="adviceBox" class="muted">—</div>
+    </div>
+    <div class="card">
+      <h3>⚡ Benchmark de modelos Whisper</h3>
+      <p class="muted small">Carga cada modelo y mide cuánto tarda en esta PC. Útil para elegir.</p>
+      <div class="form-row">
+        <label>Modelos</label>
+        <label class="muted small"><input type="checkbox" class="bm" value="tiny" checked> tiny</label>
+        <label class="muted small"><input type="checkbox" class="bm" value="base" checked> base</label>
+        <label class="muted small"><input type="checkbox" class="bm" value="small" checked> small</label>
+        <label class="muted small"><input type="checkbox" class="bm" value="medium"> medium</label>
+      </div>
+      <div class="form-row">
+        <label>Dispositivo</label>
+        <select id="bmDevice">
+          <option value="auto">Auto</option>
+          <option value="cpu">CPU</option>
+          <option value="cuda">GPU (CUDA)</option>
+        </select>
+        <button class="btn primary" id="runBench">Ejecutar benchmark</button>
+      </div>
+      <div id="bmResult" class="muted small">—</div>
+    </div>
+    <div class="card" id="cudaGuideCard" style="display:none">
+      <h3>🔧 Guía: Instalar CUDA para Whisper</h3>
+      <ol class="muted">
+        <li>Comprueba que tu driver NVIDIA esté actualizado (<code>nvidia-smi</code>).</li>
+        <li>Instala las librerías CUDA de Python:
+          <pre class="code-block small">pip install nvidia-cublas-cu12 nvidia-cudnn-cu12</pre>
+        </li>
+        <li>Reinicia el núcleo desde esta pestaña (botón abajo).</li>
+        <li>Vuelve a Sistema; <strong>CUDA (para Whisper en GPU)</strong> debería decir ✅ Lista.</li>
+        <li>En Configuración, pon <strong>Dispositivo = Auto</strong> y modelo <strong>medium</strong> (tu RTX soporta hasta large-v3).</li>
+      </ol>
+      <button class="btn ghost" id="copyCuda">Copiar comando pip</button>
+    </div>
+  </section>
+
+  <!-- Pestaña Configuración -->
+  <section class="tab-panel" id="tab-config">
+    <div class="card">
+      <h3>Cerebro</h3>
+      <div class="form-row">
+        <label>Proveedor</label>
+        <select id="cfgProvider">
+          <option value="claude">Claude Pro (nube — más capaz)</option>
+          <option value="ollama">Ollama (local — gratis, offline)</option>
+        </select>
+      </div>
+      <div class="form-row" id="ollamaRow" style="display:none">
+        <label>Modelo local</label>
+        <select id="cfgOllamaModel"></select>
+        <button class="btn ghost small" id="refreshOllama">Refrescar</button>
+      </div>
+      <div class="muted small" id="ollamaStatus">—</div>
+      <div class="form-row">
+        <label>Nivel de permisos</label>
+        <select id="cfgLevel">
+          <option value="limitado">Limitado</option>
+          <option value="equilibrado">Equilibrado</option>
+          <option value="amplio">Amplio</option>
+          <option value="dev">Dev</option>
+        </select>
+      </div>
+      <div class="form-row align-top">
+        <label>Prompt personalizado</label>
+        <textarea id="cfgPersona" rows="3" placeholder="Instrucciones extra (tono, idioma, formato)…"></textarea>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Oído</h3>
+      <div class="form-row">
+        <label>Modelo de Whisper</label>
+        <select id="cfgWhisper">
+          <option value="tiny">tiny — más rápido, calidad baja</option>
+          <option value="base">base — rápido, calidad media</option>
+          <option value="small">small — buena calidad</option>
+          <option value="medium">medium — muy buena calidad</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <label>Dispositivo</label>
+        <select id="cfgDevice">
+          <option value="auto">Auto (prefiere GPU)</option>
+          <option value="cpu">Solo CPU</option>
+          <option value="cuda">Solo GPU (CUDA)</option>
+        </select>
+      </div>
+      <div class="form-row align-top">
+        <label>Palabras de activación</label>
+        <div class="chips-input" id="triggerChips"></div>
+      </div>
+      <div class="muted small">Pulsa en una para borrarla. Teclea y pulsa Enter para añadir.</div>
+      <div class="form-row">
+        <label>Requerir "Oye Jarvis" siempre</label>
+        <input type="checkbox" id="cfgStrictWake" />
+        <span class="muted small">
+          Si está activo, cada frase necesita el wake word; nunca se queda "escuchando" tras un
+          "¿Sí?". Reduce casi a cero los disparos accidentales.
+        </span>
+      </div>
+      <div class="form-row">
+        <label>Ventana tras "¿Sí?" (segundos)</label>
+        <input type="range" id="cfgArmedTimeout" min="2" max="15" step="0.5" />
+        <span class="muted small" id="cfgArmedTimeoutV">—</span>
+      </div>
+      <div class="form-row">
+        <label>Umbral de voz (RMS)</label>
+        <input type="range" id="cfgSpeechRms" min="200" max="3000" step="50" />
+        <span class="muted small" id="cfgSpeechRmsV">—</span>
+      </div>
+      <div class="form-row">
+        <label>Umbral de silencio</label>
+        <input type="range" id="cfgSilenceRms" min="100" max="2000" step="50" />
+        <span class="muted small" id="cfgSilenceRmsV">—</span>
+      </div>
+      <div class="form-row">
+        <label>Segundos de silencio</label>
+        <input type="range" id="cfgSilenceSec" min="0.3" max="3" step="0.1" />
+        <span class="muted small" id="cfgSilenceSecV">—</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Voz</h3>
+      <div class="form-row">
+        <label>Backend TTS</label>
+        <select id="cfgBackend">
+          <option value="piper">Piper (voz latina)</option>
+          <option value="system">Voz del sistema</option>
+        </select>
+      </div>
+      <div class="form-row align-top">
+        <label>Probar voz</label>
+        <input type="text" id="ttsTestText" placeholder="Hola, soy Jarvis…" />
+        <button class="btn ghost" id="ttsTestBtn">Decir</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Obsidian</h3>
+      <div class="form-row">
+        <label>Ruta del vault</label>
+        <input type="text" id="cfgVault" placeholder="vault-prueba o ruta absoluta" />
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Interfaz</h3>
+      <div class="form-row">
+        <label>Notificaciones del sistema</label>
+        <input type="checkbox" id="cfgNotif" />
+        <span class="muted small">Avisa al terminar tareas largas.</span>
+      </div>
+      <div class="form-row">
+        <label>Animación de fondo</label>
+        <select id="cfgBackground">
+          <option value="neural">Red neuronal (procedural, ligera)</option>
+          <option value="iondrive">Impulsor iónico (modelo 3D, bloom intenso)</option>
+          <option value="particles">Partículas conectadas (red luminosa)</option>
+          <option value="quantum">Red neuronal cuántica (shells + stars + bloom)</option>
+        </select>
+        <span class="muted small">Solo una se ejecuta a la vez. Cambio instantáneo.</span>
+      </div>
+
+      <div id="ionAdmin" style="display:none; margin-top: 12px; padding: 12px; background: var(--panel-2); border-radius: 10px;">
+        <h4 style="margin-bottom:8px">Impulsor iónico — Bloom</h4>
+        <div class="form-row">
+          <label>Intensidad (strength)</label>
+          <input type="range" id="ionBloomS" min="0" max="3" step="0.01" />
+          <span class="muted small" id="ionBloomSV">—</span>
+        </div>
+        <div class="form-row">
+          <label>Radio</label>
+          <input type="range" id="ionBloomR" min="0" max="1" step="0.01" />
+          <span class="muted small" id="ionBloomRV">—</span>
+        </div>
+        <div class="form-row">
+          <label>Umbral (threshold)</label>
+          <input type="range" id="ionBloomT" min="0" max="1" step="0.01" />
+          <span class="muted small" id="ionBloomTV">—</span>
+        </div>
+
+        <h4 style="margin:12px 0 8px">Tone mapping</h4>
+        <div class="form-row">
+          <label>Exposición</label>
+          <input type="range" id="ionExp" min="0.1" max="3" step="0.01" />
+          <span class="muted small" id="ionExpV">—</span>
+        </div>
+
+        <h4 style="margin:12px 0 8px">Modelo</h4>
+        <div class="form-row">
+          <label>RPM máximo (en acción)</label>
+          <input type="range" id="ionRpm" min="0" max="10" step="0.1" />
+          <span class="muted small" id="ionRpmV">—</span>
+        </div>
+        <div class="form-row">
+          <label>Escala</label>
+          <input type="range" id="ionScale" min="0.3" max="3" step="0.05" />
+          <span class="muted small" id="ionScaleV">—</span>
+        </div>
+        <div class="form-row">
+          <label>Distancia de cámara</label>
+          <input type="range" id="ionCam" min="1.5" max="12" step="0.1" />
+          <span class="muted small" id="ionCamV">—</span>
+        </div>
+        <div class="form-row">
+          <label>Rotación X (°)</label>
+          <input type="range" id="ionRotX" min="-180" max="180" step="1" />
+          <span class="muted small" id="ionRotXV">—</span>
+        </div>
+        <div class="form-row">
+          <label>Rotación Y (°)</label>
+          <input type="range" id="ionRotY" min="-180" max="180" step="1" />
+          <span class="muted small" id="ionRotYV">—</span>
+        </div>
+        <div class="form-row">
+          <label>Rotación Z inicial (°)</label>
+          <input type="range" id="ionRotZ" min="-180" max="180" step="1" />
+          <span class="muted small" id="ionRotZV">—</span>
+        </div>
+        <div class="row-between">
+          <button class="btn ghost small" id="ionReset">Restaurar valores por defecto</button>
+          <span class="muted small">Los ajustes se guardan automáticamente.</span>
+        </div>
+      </div>
+
+      <!-- Admin de la escena "particles" -->
+      <div id="partAdmin" style="display:none; margin-top: 12px; padding: 12px; background: var(--panel-2); border-radius: 10px;">
+        <h4 style="margin-bottom:8px">Partículas conectadas — Bloom</h4>
+        <div class="form-row"><label>Intensidad</label>
+          <input type="range" id="partBloomS" min="0" max="3" step="0.01" />
+          <span class="muted small" id="partBloomSV">—</span></div>
+        <div class="form-row"><label>Radio</label>
+          <input type="range" id="partBloomR" min="0" max="1" step="0.01" />
+          <span class="muted small" id="partBloomRV">—</span></div>
+        <div class="form-row"><label>Umbral</label>
+          <input type="range" id="partBloomT" min="0" max="1" step="0.01" />
+          <span class="muted small" id="partBloomTV">—</span></div>
+
+        <h4 style="margin:12px 0 8px">Tone mapping</h4>
+        <div class="form-row"><label>Exposición</label>
+          <input type="range" id="partExp" min="0.1" max="3" step="0.01" />
+          <span class="muted small" id="partExpV">—</span></div>
+
+        <h4 style="margin:12px 0 8px">Simulación</h4>
+        <div class="form-row"><label>Nº de partículas</label>
+          <input type="range" id="partCount" min="30" max="800" step="10" />
+          <span class="muted small" id="partCountV">—</span></div>
+        <div class="form-row"><label>Distancia de conexión</label>
+          <input type="range" id="partLink" min="0.5" max="6" step="0.1" />
+          <span class="muted small" id="partLinkV">—</span></div>
+        <div class="form-row"><label>Velocidad</label>
+          <input type="range" id="partSpeed" min="0" max="3" step="0.05" />
+          <span class="muted small" id="partSpeedV">—</span></div>
+        <div class="form-row"><label>Volumen (spread)</label>
+          <input type="range" id="partSpread" min="4" max="25" step="0.5" />
+          <span class="muted small" id="partSpreadV">—</span></div>
+        <div class="form-row"><label>Tamaño de punto</label>
+          <input type="range" id="partSize" min="1" max="12" step="0.1" />
+          <span class="muted small" id="partSizeV">—</span></div>
+        <div class="form-row"><label>Opacidad de líneas</label>
+          <input type="range" id="partLineOp" min="0" max="1" step="0.02" />
+          <span class="muted small" id="partLineOpV">—</span></div>
+        <div class="row-between">
+          <button class="btn ghost small" id="partReset">Restaurar valores por defecto</button>
+          <span class="muted small">Nº de partículas y volumen reconstruyen la escena.</span>
+        </div>
+      </div>
+
+      <!-- Admin de la escena "quantum" -->
+      <div id="quantumAdmin" style="display:none; margin-top: 12px; padding: 12px; background: var(--panel-2); border-radius: 10px;">
+        <h4 style="margin-bottom:8px">Red neuronal cuántica — Bloom</h4>
+        <div class="form-row"><label>Intensidad</label>
+          <input type="range" id="quantBloomS" min="0" max="3" step="0.01" />
+          <span class="muted small" id="quantBloomSV">—</span></div>
+        <div class="form-row"><label>Radio</label>
+          <input type="range" id="quantBloomR" min="0" max="1" step="0.01" />
+          <span class="muted small" id="quantBloomRV">—</span></div>
+        <div class="form-row"><label>Umbral</label>
+          <input type="range" id="quantBloomT" min="0" max="1" step="0.01" />
+          <span class="muted small" id="quantBloomTV">—</span></div>
+
+        <h4 style="margin:12px 0 8px">Tone mapping</h4>
+        <div class="form-row"><label>Exposición</label>
+          <input type="range" id="quantExp" min="0.1" max="3" step="0.01" />
+          <span class="muted small" id="quantExpV">—</span></div>
+
+        <h4 style="margin:12px 0 8px">Escena</h4>
+        <div class="form-row"><label>Escala global</label>
+          <input type="range" id="quantScale" min="0.3" max="2.5" step="0.01" />
+          <span class="muted small" id="quantScaleV">—</span></div>
+        <div class="form-row"><label>Brillo de nodos</label>
+          <input type="range" id="quantNode" min="0.2" max="3" step="0.05" />
+          <span class="muted small" id="quantNodeV">—</span></div>
+        <div class="form-row"><label>Opacidad de aristas</label>
+          <input type="range" id="quantEdge" min="0" max="1" step="0.02" />
+          <span class="muted small" id="quantEdgeV">—</span></div>
+        <div class="form-row"><label>Velocidad del flujo</label>
+          <input type="range" id="quantFlowS" min="0" max="5" step="0.05" />
+          <span class="muted small" id="quantFlowSV">—</span></div>
+        <div class="form-row"><label>Brillo del flujo</label>
+          <input type="range" id="quantFlowB" min="0" max="4" step="0.05" />
+          <span class="muted small" id="quantFlowBV">—</span></div>
+        <div class="form-row"><label>Brillo de estrellas</label>
+          <input type="range" id="quantStar" min="0" max="1.5" step="0.02" />
+          <span class="muted small" id="quantStarV">—</span></div>
+
+        <h4 style="margin:12px 0 8px">Colores extra</h4>
+        <div class="form-row">
+          <label>Color del fondo</label>
+          <input type="color" id="quantBg" />
+          <label>Tinte de estrellas</label>
+          <input type="color" id="quantStarCol" />
+        </div>
+        <div class="muted small" style="margin:4px 0 8px">
+          Los colores principales (A nodos / B gradiente) se controlan desde los
+          <strong>color pickers</strong> de más abajo en la sección Interfaz.
+        </div>
+
+        <div class="row-between">
+          <button class="btn ghost small" id="quantReset">Restaurar valores por defecto</button>
+          <span class="muted small">Los cambios se aplican y guardan al instante.</span>
+        </div>
+      </div>
+
+      <!-- Colores por escena (restaurables aparte) -->
+      <div class="form-row" style="margin-top:14px">
+        <label>Color primario (nodos/puntos)</label>
+        <input type="color" id="cfgColorA" />
+        <label>Color secundario (líneas/fondo)</label>
+        <input type="color" id="cfgColorB" />
+        <button class="btn ghost small" id="colorsReset">↺ Restaurar colores</button>
+      </div>
+      <div class="muted small" style="margin-top:-4px">
+        Los colores dependen de la animación activa. "Restaurar colores" solo afecta a estos.
+      </div>
+    </div>
+
+    <div class="row-between" style="margin:12px 20px">
+      <button class="btn primary" id="saveCfg">Guardar cambios</button>
+      <button class="btn ghost" id="restartCore">Reiniciar núcleo</button>
+    </div>
+    <div class="muted small" id="cfgNote" style="margin:0 20px 20px">—</div>
+  </section>
+
+  <!-- Pestaña Sonidos -->
+  <section class="tab-panel" id="tab-sonidos">
+    <div class="card">
+      <div class="row-between">
+        <h3>🔊 Sonidos del widget</h3>
+        <div style="display:flex;gap:10px;align-items:center">
+          <button class="btn ghost small" id="sndStopAll" title="Parar cualquier prueba en reproducción">⏹ Parar todo</button>
+          <label class="muted small">
+            <input type="checkbox" id="sndEnabled" /> Activar sonidos
+          </label>
+        </div>
+      </div>
+      <p class="muted small">
+        Volúmenes y archivos de los efectos del chat flotante. Los cambios se aplican
+        al instante.
+      </p>
+      <div class="form-row">
+        <label>Volumen general</label>
+        <input type="range" id="sndMaster" min="0" max="100" value="60" />
+        <span class="muted small" id="sndMasterV">60%</span>
+      </div>
+      <div id="sndSlots" class="snd-slots">
+        <div class="muted">Cargando…</div>
+      </div>
+      <div class="muted small">
+        Arrastra un archivo <code>.mp3</code>, <code>.wav</code> u <code>.ogg</code>
+        (máx 2 MB) sobre cualquier fila para reemplazar su sonido. Usa
+        <strong>Restaurar</strong> para volver al original.
+      </div>
+    </div>
+  </section>
+
+  <!-- Pestaña MCPs -->
+  <section class="tab-panel" id="tab-mcps">
+    <div class="card">
+      <h3>🔗 Integraciones MCP (Gmail, Calendar, Drive…)</h3>
+      <p class="muted">
+        Los MCPs son conectores oficiales de Anthropic que le dan a Claude acceso a servicios
+        externos. Como Jarvis usa Claude Code como cerebro, cualquier MCP que instales en Claude
+        Code quedará disponible aquí automáticamente.
+      </p>
+      <h4>Cómo habilitar un MCP</h4>
+      <ol>
+        <li>En tu terminal, corre: <code>claude mcp</code> (interactivo) o <code>claude mcp add &lt;nombre&gt;</code>.</li>
+        <li>Para los oficiales de claude.ai (Gmail, Calendar, Drive, Slack…), ve a
+          <strong>claude.ai → Settings → Connectors</strong>, conéctalos con tu cuenta y
+          autoriza. Jarvis los heredará automáticamente.</li>
+        <li>Reinicia el núcleo desde Configuración y pregúntale a Jarvis algo del servicio
+          (<em>"¿Qué correos tengo sin leer?"</em>).</li>
+      </ol>
+      <div class="advice-item info">
+        <strong>Nota:</strong> Los MCPs requieren autorización OAuth del usuario — Jarvis no
+        puede hacerla por ti. Una vez autorizados, los usa sin fricciones.
+      </div>
+      <h4>Conectores populares</h4>
+      <div class="mcp-grid">
+        <div class="mcp-item"><strong>📧 Gmail</strong><div class="muted small">Leer, buscar, redactar correos.</div></div>
+        <div class="mcp-item"><strong>📅 Google Calendar</strong><div class="muted small">Ver y crear eventos.</div></div>
+        <div class="mcp-item"><strong>📁 Google Drive</strong><div class="muted small">Buscar y leer archivos.</div></div>
+        <div class="mcp-item"><strong>💬 Slack</strong><div class="muted small">Mensajes y canales.</div></div>
+        <div class="mcp-item"><strong>📊 HubSpot</strong><div class="muted small">CRM.</div></div>
+        <div class="mcp-item"><strong>🧩 monday.com</strong><div class="muted small">Proyectos y tareas.</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Pestaña Ayuda -->
+  <section class="tab-panel" id="tab-ayuda">
+    <div class="card">
+      <h3>💡 Qué puedes pedirle a Jarvis</h3>
+      <div class="grid-2">
+        <div>
+          <h4>Vault / notas</h4>
+          <ul class="help-list">
+            <li>"¿Qué proyectos tengo apuntados?"</li>
+            <li>"Resume mis ideas de esta semana."</li>
+            <li>"Añade al diario de hoy que terminé la Fase 6."</li>
+            <li>"Crea una nota en Proyectos llamada Nuevo cliente."</li>
+          </ul>
+          <h4>Sistema (Fase 4)</h4>
+          <ul class="help-list">
+            <li>"Abre Visual Studio Code."</li>
+            <li>"¿Cuánto espacio queda en disco?"</li>
+            <li>"Pon el volumen al 40%."</li>
+            <li>"Toma una captura de pantalla."</li>
+          </ul>
+        </div>
+        <div>
+          <h4>Web</h4>
+          <ul class="help-list">
+            <li>"Busca cuándo sale la próxima película de Villeneuve."</li>
+            <li>"Resume esta URL: …"</li>
+          </ul>
+          <h4>Conversación</h4>
+          <ul class="help-list">
+            <li>"¿Qué hora es?"</li>
+            <li>"Explícame qué es un callback en JavaScript."</li>
+            <li>"Hazme un chiste programador."</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>⌨️ Atajos</h3>
+      <table class="kv">
+        <tr><td>Oír / dejar de oír</td><td>Botón 🎤 del widget</td></tr>
+        <tr><td>Abrir dashboard</td><td>Botón 📊 del widget</td></tr>
+        <tr><td>Activar por voz</td><td>Di <strong>"Oye Jarvis"</strong></td></tr>
+      </table>
+    </div>
+    <div class="card">
+      <h3>🧠 Cambiar de cerebro</h3>
+      <p class="muted">
+        En <strong>Configuración → Cerebro</strong> puedes alternar entre:
+      </p>
+      <ul>
+        <li><strong>Claude Pro</strong> (nube): más capaz, usa tu plan, puede acceder al vault y ejecutar comandos.</li>
+        <li><strong>Ollama local</strong> (gratis): corre un modelo en tu RTX 2070 SUPER. Sin internet. Solo conversa (no toca vault ni ejecuta).</li>
+      </ul>
+      <p class="muted small">
+        Para Ollama: instala desde <code>ollama.com</code>, luego <code>ollama pull qwen2.5-coder:7b</code>.
+      </p>
+    </div>
+  </section>
+
+  <script src="lib/d3.v7.min.js"></script>
+  <script type="importmap">
+  {
+    "imports": {
+      "three":          "https://unpkg.com/three@0.160.0/build/three.module.min.js",
+      "three/addons/":  "https://unpkg.com/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+  <script type="module" src="../renderer/shader-bg.js"></script>
+  <!-- Librerías del grafo 3D del vault. UMD síncronos → se garantizan en
+       window.ForceGraph3D / window.SpriteText antes de que corra dashboard.js.
+       Traen su propia copia pequeña de three internamente (no afecta al
+       canvas de fondo, que sigue usando el importmap). -->
+  <script src="https://unpkg.com/3d-force-graph@1.74.0/dist/3d-force-graph.min.js"></script>
+  <script src="https://unpkg.com/three-spritetext@1.8.1/dist/three-spritetext.min.js"></script>
+  <script>window.JARVIS_AUDIO_BASE = '../renderer/audio/';</script>
+  <script src="../renderer/sounds.js"></script>
+  <script src="dashboard.js"></script>
+  <script type="module" src="architecture3d.js"></script>
+</body>
+</html>
