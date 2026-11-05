@@ -1,0 +1,72 @@
+{
+  "CallerReference": "revistamoi-staging-cf-20261105",
+  "Comment": "PRUEBA staging - CloudFront frente al ALB de revistamoi staging",
+  "Enabled": true,
+  "PriceClass": "PriceClass_100",
+  "HttpVersion": "http2and3",
+  "IsIPV6Enabled": true,
+
+  "Origins": {
+    "Quantity": 1,
+    "Items": [
+      {
+        "Id": "revistamoi-staging-alb-origin",
+        "DomainName": "revist-Appli-dl7j7vhmTqmW-1687066081.us-east-1.elb.amazonaws.com",
+        "OriginPath": "",
+        "CustomHeaders": { "Quantity": 0 },
+        "CustomOriginConfig": {
+          "HTTPPort": 80,
+          "HTTPSPort": 443,
+          "OriginProtocolPolicy": "http-only",
+          "OriginSslProtocols": { "Quantity": 1, "Items": ["TLSv1.2"] },
+          "OriginReadTimeout": 30,
+          "OriginKeepaliveTimeout": 5
+        },
+        "ConnectionAttempts": 3,
+        "ConnectionTimeout": 10,
+        "OriginShield": { "Enabled": false }
+      }
+    ]
+  },
+
+  "DefaultCacheBehavior": {
+    "TargetOriginId": "revistamoi-staging-alb-origin",
+    "ViewerProtocolPolicy": "redirect-to-https",
+    "AllowedMethods": {
+      "Quantity": 7,
+      "Items": ["HEAD", "GET", "OPTIONS", "PUT", "POST", "PATCH", "DELETE"],
+      "CachedMethods": { "Quantity": 2, "Items": ["HEAD", "GET"] }
+    },
+    "SmoothStreaming": false,
+    "Compress": true,
+    "LambdaFunctionAssociations": { "Quantity": 0 },
+    "FunctionAssociations": { "Quantity": 0 },
+    "CachePolicyId": "4135ea2d-6df8-44a3-9df3-4b5a84be39ad",
+    "OriginRequestPolicyId": "216adef6-5c7f-47e4-b989-5492eafa07d3",
+    "FieldLevelEncryptionId": ""
+  },
+
+  "CacheBehaviors": {
+    "Quantity": 8,
+    "Items": [
+      { "PathPattern": "*.css",  "TargetOriginId": "revistamoi-staging-alb-origin", "ViewerProtocolPolicy": "redirect-to-https", "AllowedMethods": { "Quantity": 2, "Items": ["HEAD", "GET"], "CachedMethods": { "Quantity": 2, "Items": ["HEAD", "GET"] } }, "Compress": true, "CachePolicyId": "658327ea-f89d-4fab-a63d-7e88639e58f6" },
+      { "PathPattern": "*.js",   "TargetOriginId": "revistamoi-staging-alb-origin", "ViewerProtocolPolicy": "redirect-to-https", "AllowedMethods": { "Quantity": 2, "Items": ["HEAD", "GET"], "CachedMethods": { "Quantity": 2, "Items": ["HEAD", "GET"] } }, "Compress": true, "CachePolicyId": "658327ea-f89d-4fab-a63d-7e88639e58f6" },
+      { "PathPattern": "*.jpg",  "TargetOriginId": "revistamoi-staging-alb-origin", "ViewerProtocolPolicy": "redirect-to-https", "AllowedMethods": { "Quantity": 2, "Items": ["HEAD", "GET"], "CachedMethods": { "Quantity": 2, "Items": ["HEAD", "GET"] } }, "Compress": true, "CachePolicyId": "658327ea-f89d-4fab-a63d-7e88639e58f6" },
+      { "PathPattern": "*.png",  "TargetOriginId": "revistamoi-staging-alb-origin", "ViewerProtocolPolicy": "redirect-to-https", "AllowedMethods": { "Quantity": 2, "Items": ["HEAD", "GET"], "CachedMethods": { "Quantity": 2, "Items": ["HEAD", "GET"] } }, "Compress": true, "CachePolicyId": "658327ea-f89d-4fab-a63d-7e88639e58f6" },
+      { "PathPattern": "*.webp", "TargetOriginId": "revistamoi-staging-alb-origin", "ViewerProtocolPolicy": "redirect-to-https", "AllowedMethods": { "Quantity": 2, "Items": ["HEAD", "GET"], "CachedMethods": { "Quantity": 2, "Items": ["HEAD", "GET"] } }, "Compress": true, "CachePolicyId": "658327ea-f89d-4fab-a63d-7e88639e58f6" },
+      { "PathPattern": "*.woff2","TargetOriginId": "revistamoi-staging-alb-origin", "ViewerProtocolPolicy": "redirect-to-https", "AllowedMethods": { "Quantity": 2, "Items": ["HEAD", "GET"], "CachedMethods": { "Quantity": 2, "Items": ["HEAD", "GET"] } }, "Compress": true, "CachePolicyId": "658327ea-f89d-4fab-a63d-7e88639e58f6" },
+      { "PathPattern": "/wp-content/uploads/*", "TargetOriginId": "revistamoi-staging-alb-origin", "ViewerProtocolPolicy": "redirect-to-https", "AllowedMethods": { "Quantity": 2, "Items": ["HEAD", "GET"], "CachedMethods": { "Quantity": 2, "Items": ["HEAD", "GET"] } }, "Compress": true, "CachePolicyId": "658327ea-f89d-4fab-a63d-7e88639e58f6" },
+      { "PathPattern": "/wp-content/themes/*",  "TargetOriginId": "revistamoi-staging-alb-origin", "ViewerProtocolPolicy": "redirect-to-https", "AllowedMethods": { "Quantity": 2, "Items": ["HEAD", "GET"], "CachedMethods": { "Quantity": 2, "Items": ["HEAD", "GET"] } }, "Compress": true, "CachePolicyId": "658327ea-f89d-4fab-a63d-7e88639e58f6" }
+    ]
+  },
+
+  "Aliases": { "Quantity": 0, "Items": [] },
+
+  "ViewerCertificate": {
+    "CloudFrontDefaultCertificate": true
+  },
+
+  "CustomErrorResponses": { "Quantity": 0 },
+  "Restrictions": { "GeoRestriction": { "RestrictionType": "none", "Quantity": 0 } },
+  "Logging": { "Enabled": false, "IncludeCookies": false, "Bucket": "", "Prefix": "" }
+}
