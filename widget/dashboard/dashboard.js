@@ -118,9 +118,14 @@ function setState(state) {
 function applyModels(m) {
   models = m;
   const provider = m.brain?.provider || 'claude';
-  const brainLabel = provider === 'ollama'
-    ? `Ollama local · ${escapeHtml(m.brain?.ollama_model || '?')}`
-    : `Claude Pro · ${escapeHtml((m.brain?.cmd || '').split(/[\\\/]/).slice(-1)[0] || 'claude')}`;
+  let brainLabel;
+  if (provider === 'ollama') {
+    brainLabel = `Ollama local · ${escapeHtml(m.brain?.ollama_model || '?')}`;
+  } else if (provider === 'gemini') {
+    brainLabel = `Gemini · ${escapeHtml(m.brain?.gemini_model || '?')}`;
+  } else {
+    brainLabel = `Claude Pro · ${escapeHtml((m.brain?.cmd || '').split(/[\\\/]/).slice(-1)[0] || 'claude')}`;
+  }
   $('mBrain').innerHTML = brainLabel;
   $('mLevel').textContent = m.brain?.permission_level || '—';
   $('mEars').textContent = m.ears?.enabled
@@ -263,7 +268,8 @@ async function loadHistory() {
     $('historyBox').innerHTML = data.slice().reverse().map(ev => {
       const ts = ev.ts ? new Date(ev.ts).toLocaleString() : '';
       const src = ev.source === 'voice' ? '🎤 voz' : '⌨️ texto';
-      const prov = ev.provider === 'ollama' ? '🖥️ local' : '☁️ Pro';
+      const prov = ev.provider === 'ollama' ? '🖥️ local'
+        : (ev.provider === 'gemini' ? '✨ Gemini' : '☁️ Pro');
       const lat = ev.latency ? `cerebro ${ev.latency.brain}s · voz ${ev.latency.voice}s` : '';
       return `<div class="turn-item">
         <div class="meta">
@@ -377,8 +383,10 @@ async function loadConfig() {
     initSlider('cfgSilenceSec', 'cfgSilenceSecV', cfg.ears?.silence_seconds ?? 0.9);
     $('cfgStrictWake').checked = !!cfg.ears?.strict_wake;
     initSlider('cfgArmedTimeout', 'cfgArmedTimeoutV', cfg.ears?.armed_timeout ?? 6);
-    toggleOllamaRow();
+    $('cfgGeminiKey').value = cfg.brain?.gemini?.api_key || '';
+    toggleProviderRows();
     loadOllamaStatus();
+    loadGeminiStatus();
   } catch (e) {
     $('cfgNote').textContent = `No pude cargar la configuración: ${e.message}`;
   }
@@ -415,10 +423,15 @@ function renderTriggerChips(words) {
   };
 }
 
-function toggleOllamaRow() {
-  $('ollamaRow').style.display = $('cfgProvider').value === 'ollama' ? 'flex' : 'none';
+function toggleProviderRows() {
+  const p = $('cfgProvider').value;
+  $('ollamaRow').style.display = p === 'ollama' ? 'flex' : 'none';
+  $('ollamaStatus').style.display = p === 'ollama' ? 'block' : 'none';
+  $('geminiRow').style.display = p === 'gemini' ? 'flex' : 'none';
+  $('geminiKeyRow').style.display = p === 'gemini' ? 'flex' : 'none';
+  $('geminiStatus').style.display = p === 'gemini' ? 'block' : 'none';
 }
-$('cfgProvider').onchange = toggleOllamaRow;
+$('cfgProvider').onchange = toggleProviderRows;
 
 async function loadOllamaStatus() {
   try {
@@ -451,6 +464,50 @@ async function loadOllamaStatus() {
 }
 $('refreshOllama').onclick = loadOllamaStatus;
 
+async function loadGeminiStatus(attempt = 0) {
+  try {
+    $('geminiStatus').textContent = attempt === 0 ? 'Comprobando Gemini…' : 'Reintentando…';
+    const { data } = await request('get_providers');
+    const g = data.gemini || {};
+
+    // Poblar dropdown SIEMPRE (incluso si la API no responde), para que el
+    // usuario pueda elegir modelo sin esperar la comprobación remota.
+    const sel = $('cfgGeminiModel');
+    const prev = sel.value || g.selected_model;
+    sel.innerHTML = '';
+    (g.available_models || []).forEach(m => {
+      const opt = document.createElement('option');
+      opt.value = m;
+      opt.textContent = m;
+      sel.appendChild(opt);
+    });
+    sel.value = prev || g.selected_model;
+
+    let statusLine;
+    if (!g.configured) {
+      statusLine = '⚠️ Falta API key. Créala en aistudio.google.com/apikey y pégala arriba.';
+    } else if (g.reachable) {
+      statusLine = `✅ Gemini responde. Modelo seleccionado: ${g.selected_model}.`;
+    } else if (attempt < 1) {
+      // Cold start: la primera comprobación a Google a veces tarda. Reintentamos una vez.
+      setTimeout(() => loadGeminiStatus(attempt + 1), 1500);
+      return;
+    } else {
+      statusLine = '⚠️ Key configurada pero la API no responde. Verifica la key o la red.';
+    }
+    $('geminiStatus').textContent = statusLine;
+  } catch (e) {
+    $('geminiStatus').textContent = `Error consultando Gemini: ${e.message}`;
+  }
+}
+$('refreshGemini').onclick = loadGeminiStatus;
+$('toggleGeminiKey').onclick = () => {
+  const inp = $('cfgGeminiKey');
+  const btn = $('toggleGeminiKey');
+  if (inp.type === 'password') { inp.type = 'text'; btn.textContent = 'Ocultar'; }
+  else { inp.type = 'password'; btn.textContent = 'Mostrar'; }
+};
+
 $('saveCfg').onclick = async () => {
   const patch = {
     'brain.provider': $('cfgProvider').value,
@@ -471,13 +528,23 @@ $('saveCfg').onclick = async () => {
   if ($('cfgProvider').value === 'ollama') {
     patch['brain.ollama.model'] = $('cfgOllamaModel').value;
   }
+  if ($('cfgProvider').value === 'gemini') {
+    patch['brain.gemini.model'] = $('cfgGeminiModel').value;
+  }
+  // La API key se guarda siempre que haya algo escrito (aunque el provider no sea gemini)
+  const geminiKeyVal = $('cfgGeminiKey').value.trim();
+  if (geminiKeyVal) {
+    patch['brain.gemini.api_key'] = geminiKeyVal;
+  }
   const { note } = await request('set_config', { patch });
   // Si cambió provider, aplícalo en caliente al cerebro
-  await request('set_provider', {
-    provider: $('cfgProvider').value,
-    model: $('cfgOllamaModel').value,
-  });
+  const prov = $('cfgProvider').value;
+  const modelForProvider = prov === 'gemini'
+    ? $('cfgGeminiModel').value
+    : $('cfgOllamaModel').value;
+  await request('set_provider', { provider: prov, model: modelForProvider });
   $('cfgNote').textContent = note || 'Guardado.';
+  if (prov === 'gemini') loadGeminiStatus();
 };
 
 $('restartCore').onclick = async () => {

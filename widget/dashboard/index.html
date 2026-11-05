@@ -267,6 +267,7 @@
         <select id="cfgProvider">
           <option value="claude">Claude Pro (nube — más capaz)</option>
           <option value="ollama">Ollama (local — gratis, offline)</option>
+          <option value="gemini">Gemini (nube — Google, 1M tokens)</option>
         </select>
       </div>
       <div class="form-row" id="ollamaRow" style="display:none">
@@ -275,6 +276,17 @@
         <button class="btn ghost small" id="refreshOllama">Refrescar</button>
       </div>
       <div class="muted small" id="ollamaStatus">—</div>
+      <div class="form-row" id="geminiRow" style="display:none">
+        <label>Modelo Gemini</label>
+        <select id="cfgGeminiModel"></select>
+        <button class="btn ghost small" id="refreshGemini">Refrescar</button>
+      </div>
+      <div class="form-row" id="geminiKeyRow" style="display:none">
+        <label>API key</label>
+        <input type="password" id="cfgGeminiKey" placeholder="AIza… (de aistudio.google.com/apikey)" />
+        <button class="btn ghost small" id="toggleGeminiKey">Mostrar</button>
+      </div>
+      <div class="muted small" id="geminiStatus">—</div>
       <div class="form-row">
         <label>Nivel de permisos</label>
         <select id="cfgLevel">

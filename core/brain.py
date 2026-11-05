@@ -30,6 +30,7 @@ from pathlib import Path
 
 from platform_layer import resolve_claude_cmd
 from brain_ollama import ask_ollama, is_ollama_up
+from brain_gemini import ask_gemini_with_fallback, is_gemini_reachable, GeminiOverloadError
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -142,7 +143,7 @@ LEVEL_PROMPTS = {
 class Brain:
     def __init__(self, config: dict):
         cfg = config.get("brain", {})
-        self.provider = cfg.get("provider", "claude")  # "claude" | "ollama"
+        self.provider = cfg.get("provider", "claude")  # "claude" | "ollama" | "gemini"
         self.cmd = resolve_claude_cmd(cfg.get("claude_cmd", "claude"))
         self.timeout = int(cfg.get("timeout_seconds", 180))
         self.max_history = int(cfg.get("max_history", 12))
@@ -157,6 +158,10 @@ class Brain:
         ollama_cfg = cfg.get("ollama", {}) or {}
         self.ollama_model = ollama_cfg.get("model", "qwen2.5-coder:7b")
         self.ollama_host = ollama_cfg.get("host", "http://127.0.0.1:11434")
+
+        gemini_cfg = cfg.get("gemini", {}) or {}
+        self.gemini_model = gemini_cfg.get("model", "gemini-3.6-flash")
+        self.gemini_api_key = (gemini_cfg.get("api_key") or "").strip()
 
         self.history: list[tuple[str, str]] = []
 
@@ -224,6 +229,8 @@ class Brain:
 
         if self.provider == "ollama":
             reply = self._ask_ollama(user_text)
+        elif self.provider == "gemini":
+            reply = self._ask_gemini(user_text)
         else:
             reply = self._ask_claude(user_text)
 
@@ -373,6 +380,42 @@ class Brain:
         }
         return text or "No obtuve respuesta del modelo local."
 
+    # ---------- backend: Gemini ----------
+    def _ask_gemini(self, user_text: str) -> str:
+        prompt = self._build_prompt(user_text)
+        system = self._system_prompt() + (
+            "\n\nNota: estás corriendo en MODO GEMINI (nube, Google AI). "
+            "NO tienes acceso directo a archivos del vault ni a comandos de la "
+            "PC: solo puedes conversar y razonar. Si el usuario te pide algo "
+            "que requiere tocar archivos o ejecutar comandos, dile que debe "
+            "cambiar el cerebro a Claude Pro desde el dashboard."
+        )
+        self.last_prompt = prompt
+        self.last_system_prompt = system
+        try:
+            text, meta = ask_gemini_with_fallback(
+                self.gemini_model, prompt, system,
+                api_key=self.gemini_api_key, timeout=self.timeout,
+            )
+        except GeminiOverloadError:
+            # Todos los modelos saturados — mensaje corto para TTS
+            return ("Los modelos de Gemini están saturados ahora mismo. "
+                    "Prueba de nuevo en un momento, o cambia a Claude desde el dashboard.")
+        except RuntimeError as e:
+            # Errores de key, red, formato — mensaje breve sin volcar JSON
+            msg = str(e).split("{")[0].strip() or str(e)
+            return f"Gemini no está disponible. {msg[:160]}"
+        self.last_raw_output = text
+        self.last_turn_tokens = {
+            "input": meta.get("prompt_tokens"),
+            "output": meta.get("completion_tokens"),
+            "provider": "gemini",
+            "model": meta.get("model"),
+            "attempted_models": meta.get("attempted_models"),
+            "fallback_used": meta.get("fallback_used"),
+        }
+        return text or "No obtuve respuesta de Gemini."
+
     # ---------- utilidades ----------
     def provider_status(self) -> dict:
         return {
@@ -381,6 +424,8 @@ class Brain:
             "ollama_up": is_ollama_up(self.ollama_host),
             "ollama_model": self.ollama_model,
             "ollama_host": self.ollama_host,
+            "gemini_model": self.gemini_model,
+            "gemini_configured": bool(self.gemini_api_key),
         }
 
     def transparency(self) -> dict:

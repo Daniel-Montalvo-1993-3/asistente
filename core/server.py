@@ -24,6 +24,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from brain import Brain              # noqa: E402
 from brain_ollama import list_ollama_models, is_ollama_up  # noqa: E402
+from brain_gemini import RECOMMENDED_MODELS as GEMINI_MODELS, is_gemini_reachable  # noqa: E402
 from tts import Speaker              # noqa: E402
 from ears import Listener            # noqa: E402
 from logger import Logger            # noqa: E402
@@ -68,6 +69,8 @@ def current_models() -> dict:
             "provider": brain.provider,
             "cmd": str(brain.cmd),
             "ollama_model": brain.ollama_model,
+            "gemini_model": brain.gemini_model,
+            "gemini_configured": bool(brain.gemini_api_key),
             "permission_level": brain.level,
             "vault": str(brain.vault),
             "vault_exists": brain.vault.exists(),
@@ -225,25 +228,37 @@ async def handle_dashboard(ws, msg: dict) -> None:
                 "selected_model": brain.ollama_model,
                 "recommended": "qwen2.5-coder:7b",
             },
+            "gemini": {
+                "configured": bool(brain.gemini_api_key),
+                "reachable": is_gemini_reachable(brain.gemini_api_key),
+                "available_models": GEMINI_MODELS,
+                "selected_model": brain.gemini_model,
+            },
         }})
     elif t == "set_provider":
         provider = (msg.get("provider") or "").strip()
         model = (msg.get("model") or "").strip()
-        if provider in ("claude", "ollama"):
+        if provider in ("claude", "ollama", "gemini"):
             brain.provider = provider
             if model and provider == "ollama":
                 brain.ollama_model = model
+            if model and provider == "gemini":
+                brain.gemini_model = model
             logger.log("provider_change", provider=provider, model=model)
             # Persistir en config
             patch = {"brain.provider": provider}
             if model and provider == "ollama":
                 patch["brain.ollama.model"] = model
+            if model and provider == "gemini":
+                patch["brain.gemini.model"] = model
             new_cfg = apply_patch(load_config(), patch)
             CONFIG_PATH.write_text(json.dumps(new_cfg, indent=2, ensure_ascii=False),
                                    encoding="utf-8")
             await broadcast({"type": "models", "data": current_models()})
         await send_to(ws, {"type": "provider_changed", "reply_id": reply_id,
-                           "provider": brain.provider, "model": brain.ollama_model})
+                           "provider": brain.provider,
+                           "ollama_model": brain.ollama_model,
+                           "gemini_model": brain.gemini_model})
     elif t == "test_tts":
         text = (msg.get("text") or "Hola, soy Jarvis. Esta es una prueba de voz.")[:400]
         loop = asyncio.get_event_loop()
@@ -375,10 +390,14 @@ def _apply_live(patch: dict) -> None:
             brain.level = value
         elif key == "brain.custom_persona":
             brain.custom_persona = (value or "").strip()
-        elif key == "brain.provider" and value in {"claude", "ollama"}:
+        elif key == "brain.provider" and value in {"claude", "ollama", "gemini"}:
             brain.provider = value
         elif key == "brain.ollama.model":
             brain.ollama_model = value
+        elif key == "brain.gemini.model":
+            brain.gemini_model = value
+        elif key == "brain.gemini.api_key":
+            brain.gemini_api_key = (value or "").strip()
         elif key == "ears.trigger_words" and listener:
             try:
                 listener.update_trigger_words(value)
